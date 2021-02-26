@@ -6,7 +6,8 @@ const pool = new Pool({
   password: process.env.PASSWORD,
   database: process.env.DB,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000
+  connectionTimeoutMillis: 2000,
+  multipleStatements: true
 });
 
 pool.on('remove', client => {

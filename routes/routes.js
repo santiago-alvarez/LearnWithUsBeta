@@ -7,7 +7,15 @@ const usuarios = require('../controllers/controller_usuarios');
 La query permite extraer los generos*/
 router.get('/generos', usuarios.generos);
 
-/*26/02/2021 - Juan camilo Montoya Mejía / Santiago Álvarez Muñoz
-LA query permite registrar un usuario*/
-router.get('/usuarios-registro', usuarios.insert);
+/*26/02/2021 - Juan Camilo Montoya Mejía / Santiago Álvarez Muñoz
+La query permite registrar un usuario*/
+router.post('/usuarios-registro', usuarios.insert);
+
+/*26/02/2021 - Juan Camilo Montoya Mejía / Santiago Álvarez Muñoz
+La query permite iniciar sesión*/
+router.post('/usuarios-inicioSesion', usuarios.start);
+
+/*26/02/2021 - Juan Camilo Montoya Mejía / Santiago Álvarez Muñoz
+El middleware obtiene la data del token del usuario*/
+router.get('/tokenVerify/:token', usuarios.token_verify);
 module.exports = router
