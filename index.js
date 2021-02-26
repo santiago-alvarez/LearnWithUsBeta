@@ -5,16 +5,16 @@ const cors = require("cors");
 
 require('dotenv').config();
 
-//Ajustes
+/*Ajustes*/
 app.set('port', process.env.PORT || 3883);
 
 const routes = require('./routes/routes');
-//Middlewares
+/*Middlewares*/
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors({origin: '*'}));
 app.use('/', routes);
-//Ajustes del servidor
+/*Ajustes del servidor*/
 app.listen(app.get('port'), () => {
 	console.log(`servidor corriendo en el puerto ${app.get('port')}`);
 });

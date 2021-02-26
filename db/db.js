@@ -7,14 +7,12 @@ const pool = new Pool({
   database: process.env.DB,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000
-})
+});
 
 pool.on('remove', client => {
-  console.log("===============");
+  console.log("Disconnect");
   //console.log(client)
-  //console.log("===============")
-})
-console.log()
-console.log("Succesfull conection with db "+pool.options.database);
-
-module.exports = { pool };
+  //console.log("Disconnect")
+});
+console.log("Succesfull conection with db "+ pool.options.database);
+module.exports = pool;
