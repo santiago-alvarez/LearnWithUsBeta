@@ -2,32 +2,15 @@ const pg = require('../db/db');
 const encrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const controller = {
-    generos: async (req, res) => {
-        try {
-            let conection = await pg.connect();
-            await conection.query('Select * from generos;')
-                .then((data) => {
-                    conection.release();
-                    res.json(data.rows);
-                })
-                .catch((err) => {
-                    conection.release();
-                    res.json({ status: false, err });
-                    console.log(err);
-                });
-        } catch (err) {
-            res.json({ status: false, err });
-            console.log(err);
-        }
-    },
+
     insert: async (req, res) => {
         try {
             const { nombre, apellido, genero, fecha_n, avatar, usuario, contraseña, correo, registro_sistema } = req.body;
             const random = Math.round(Math.random() * 6, 5);
             console.log(random);
-            await encrypt.hash(contraseña, random,async (err, cry) => {
+            await encrypt.hash(contraseña, random, async (err, cry) => {
                 if (err) {
-                    res.json({ status: false, err})
+                    res.json({ status: false, err })
                     console.log(err);
                 } else {
                     let conection = await pg.connect();
@@ -95,6 +78,24 @@ const controller = {
             }
         });
     },
+    generos: async (req, res) => {
+        try {
+            let conection = await pg.connect();
+            await conection.query('Select * from generos;')
+                .then((data) => {
+                    conection.release();
+                    res.json(data.rows);
+                })
+                .catch((err) => {
+                    conection.release();
+                    res.json({ status: false, err });
+                    console.log(err);
+                });
+        } catch (err) {
+            res.json({ status: false, err });
+            console.log(err);
+        }
+    },
     update: async (req, res) => {
         try {
             let { id, nombre, apellido, genero, fecha_n } = req.body;
@@ -113,6 +114,23 @@ const controller = {
         } catch (error) {
             res.json({ status: false, error });
             console.log(error);
+        }
+    },
+    delete: async (req, res) => {
+        try {
+            const { id } = req.params;
+            let conection = await pg.connect();
+            await conection.query('UPDATE usuarios SET activo= false, usuario = null WHERE id=$1', [id])
+                .then((data) => {
+                    res.json({ status: true });
+                })
+                .catch((err) => {
+                    res.json({ status: false, err });
+                    console.log(err);
+                });
+        } catch (err) {
+            res.json({ status: false, err });
+            console.log(err);
         }
     }
 }

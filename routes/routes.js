@@ -30,6 +30,10 @@ router.post('/usuarios-inicioSesion', usuarios.start);
 El middleware permíte actualizar cualquier aspecto de la información del usuario*/
 router.put('/usuarios-actualizacion', usuarios.update);
 
+/*28/02/2021 - Santiago Álvarez Muñoz
+El diddleware realiza el borrado lógico del usuario*/
+router.put('/usuarios-delete/:id', usuarios.delete);
+
 /*==================================================================
                     MIDDLEWARE DE CLASES
 ===================================================================*/
