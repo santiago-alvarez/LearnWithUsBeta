@@ -30,6 +30,9 @@ router.post('/usuarios-inicioSesion', usuarios.start);
 El middleware permíte actualizar cualquier aspecto de la información del usuario*/
 router.put('/usuarios-actualizacion', usuarios.update);
 
+/*1/03/2021 - Juan Camilo Montoya Mejía
+El middlewere ejecuta el envio del codigo de verificacion al correo del usuario al registrarce*/
+router.post('/usuarios-correo', usuarios.correo);
 /*==================================================================
                     MIDDLEWARE DE CLASES
 ===================================================================*/

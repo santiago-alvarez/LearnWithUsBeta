@@ -1,6 +1,20 @@
 const pg = require('../db/db');
 const encrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const smtpTransport = require('nodemailer-smtp-transport');
+const nodemailer = require('nodemailer');
+require('dotenv').config();
+console.log(process.env.PASS);
+console.log(process.env.CORREO);
+let transporter = nodemailer.createTransport(smtpTransport({
+    service: 'gmail',
+    host: 'smtp.gmail.com',
+    auth: {
+        user: process.env.CORREO,
+        pass: process.env.PASS
+    }
+}));
+
 const controller = {
     generos: async (req, res) => {
         try {
@@ -20,11 +34,27 @@ const controller = {
             console.log(err);
         }
     },
+    correo: async(req,res)=>{
+        const { nombre, codigo, apellido, genero, fecha_n, avatar, usuario, contraseña, correo, registro_sistema }=req.body;
+        const mailOptions = {
+            from: 'Learn With Us',
+            to: correo,
+            subject: 'Codigo de Verificacion',
+            text: 'BEBECITAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA, brrrrrrrr'
+        };
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                res.json({status:false,error });
+                console.log(error);
+            }else{
+                res.json({status:true,info });
+            }
+        });
+    },
     insert: async (req, res) => {
         try {
             const { nombre, apellido, genero, fecha_n, avatar, usuario, contraseña, correo, registro_sistema } = req.body;
             const random = Math.round(Math.random() * 6, 5);
-            console.log(random);
             await encrypt.hash(contraseña, random,async (err, cry) => {
                 if (err) {
                     res.json({ status: false, err})
@@ -58,7 +88,7 @@ const controller = {
         try {
             const { usuario_correo, contraseña } = req.body;
             let conection = await pg.connect();
-            await conection.query('SELECT * FROM usuarios WHERE usuario= $1 OR correo= $1', [usuario_correo])
+            await conection.query('SELECT * FROM usuarios WHERE usuario= $1 OR correo= $1 where activo=true', [usuario_correo])
                 .then(async (data) => {
                     conection.release();
                     if (data.rows[0]) {
