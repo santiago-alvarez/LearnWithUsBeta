@@ -34,6 +34,9 @@ router.put('/usuarios-actualizacion', usuarios.update);
 El diddleware realiza el borrado lógico del usuario*/
 router.put('/usuarios-delete/:id', usuarios.delete);
 
+/*1/03/2021 - Juan Camilo Montoya Mejía
+El middlewere ejecuta el envio del codigo de verificacion al correo del usuario al registrarce*/
+router.post('/usuarios-correo', usuarios.correo);
 /*==================================================================
                     MIDDLEWARE DE CLASES
 ===================================================================*/
