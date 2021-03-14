@@ -1,11 +1,18 @@
 const pg = require('../db/db');
 const encrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+/*Cloud storage*/
+const path = require('path');
+const { Storage } = require('@google-cloud/storage');
+const uuid = require('uuid');
+const uuidv4 = uuid.v4;
+
+/*Nodemailer*/
 const smtpTransport = require('nodemailer-smtp-transport');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
-console.log(process.env.PASS);
-console.log(process.env.CORREO);
+
 let transporter = nodemailer.createTransport(smtpTransport({
     service: 'gmail',
     host: 'smtp.gmail.com',
@@ -14,8 +21,17 @@ let transporter = nodemailer.createTransport(smtpTransport({
         pass: process.env.PASS
     }
 }));
+const storage = new Storage({
+    projectid: process.env.GCLOUD_PROJECT,
+    credentials: {
+        client_email: process.env.GCLOUD_CLIENT_EMAIL,
+        private_key: process.env.GCLOUD_PRIVATE_KEY
+    }
+});
+const bucket = storage.bucket(process.env.GCLOUD_BUCKET);
 
 const controller = {
+    /*Registro e inicio de sesión*/
     generos: async (req, res) => {
         try {
             let conection = await pg.connect();
@@ -25,121 +41,44 @@ const controller = {
                     res.json(data.rows);
                 })
                 .catch((err) => {
-                    conection.release();
-                    res.json({ status: false, err });
+                    res.json({ status: false, err:err });
                     console.log(err);
                 });
         } catch (err) {
-            res.json({ status: false, err });
+            res.json({ status: false, err:err });
             console.log(err);
         }
     },
-    correo: async(req,res)=>{
-        const { nombre, codigo, apellido, genero, fecha_n, avatar, usuario, contraseña, correo, registro_sistema }=req.body;
-        const mailOptions = {
-            from: 'Learn With Us',
-            to: correo,
-            subject: 'Codigo de Verificacion',
-            html: `<!DOCTYPE html>
-
-            <head>
-                <meta charset="UTF-8">
-                <meta http-equiv="X-UA-Compatible" content="IE=edge">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Email - LearnWithUs</title>
-                <style>
-                    body {
-                        text-align: center;
-                        margin: 0;
-                        padding: 0;
-                        top: 0;
-                        left: 0;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    correo: async (req, res) => {
+        try {
+            const { codigo, usuario, correo } = req.body;
+            fs.readFile('./src/email.html', 'utf8', (err, html) => {
+                html = html.replace('$DontHere$2', usuario);
+                const mailOptions = {
+                    from: 'Learn With Us',
+                    to: correo,
+                    subject: 'Codigo de Verificacion',
+                    html: html.replace('$replaceHere$', codigo)
+                };
+                transporter.sendMail(mailOptions, (error, info) => {
+                    if (error) {
+                        res.json({ status: false, error: error });
+                        console.log(error);
+                    } else {
+                        res.json({ status: true, info });
                     }
-            
-                    .Main {
-                        width: 100%;
-                        height: 100vh;
-                        display: flex;
-                        flex-flow: column;
-                        align-items: center;
-                        justify-content: center;
-                    }
-            
-                    .cargando {
-                        background-image: url("https://1.bp.blogspot.com/-eXfP9XUmzHc/X02wni0s3dI/AAAAAAAAPPo/Oj9XbD4WIpgvdS_jmAkJc32Z1vOnUzTXwCLcBGAsYHQ/s16000/LogoP.png");
-                        background-repeat: no-repeat;
-                        background-position: center center;
-                        background-size: 100%;
-                        width: 15vw;
-                        height: 15vw;
-                        background-color: rgb(256, 256, 256);
-                    }
-            
-                    h2 {
-                        margin: 0;
-                    }
-            
-                    .texto {
-                        width: 40%;
-                        text-align: center;
-                    }
-            
-                    @media(max-width: 550px) {
-                        .texto {
-                            max-width: 90%;
-            
-                        }
-            
-                        .cargando {
-                            width: 30vh;
-                            height: 30vh;
-                        }
-                    }
-            
-                    @media(min-height: 730px) {
-                        .texto {
-                            font-size: 1em;
-                        }
-            
-                        body {
-                            font-size: 2em;
-                        }
-            
-                        .cargando {
-                            width: 30vh;
-                            height: 30vh;
-                        }
-                    }
-                </style>
-            </head>
-            
-            <body>
-                <div class="Main">
-                    <p class="texto">Te estás registrando en nuestra pagina web, Learn with us, ingresa el código en la pagina para
-                        continuar con el registo.</p>
-                    <div class="cargando"></div>
-                    <h2>Tu código de verificación es <br>Learn- </h2>
-                    <p class="texto">Por favor no responda este correo, ya que se encarga únicamente de la difusión, si no es usted ignore este mensaje.</p>
-                </div>
-            </body>
-            
-            </html>`
-        };
-        transporter.sendMail(mailOptions, (error, info) => {
-            if (error) {
-                res.json({status:false,error });
-                console.log(error);
-            }else{
-                res.json({status:true,info });
-            }
-        });
+                });
+            });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
     },
     insert: async (req, res) => {
         try {
             const { nombre, apellido, genero, fecha_n, avatar, usuario, contraseña, correo, registro_sistema } = req.body;
             const random = Math.round(Math.random() * 6, 5);
-            await encrypt.hash(contraseña, random,async (err, cry) => {
+            await encrypt.hash(contraseña, random, async (err, cry) => {
                 if (err) {
                     res.json({ status: false, err })
                     console.log(err);
@@ -153,11 +92,10 @@ const controller = {
                             const jsonData = {
                                 id, nombre, apellido, genero, fecha_n, edad, avatar, usuario, contraseña: cry, correo, registro_sistema
                             }
-                            let token = jwt.sign(jsonData, "26-02-2021");
+                            let token = jwt.sign(jsonData, process.env.JWB_PASSWORD);
                             res.json({ token, status: true });
                         })
                         .catch((err) => {
-                            conection.release();
                             res.json({ status: false, err });
                             console.log(err);
                         });
@@ -172,7 +110,7 @@ const controller = {
         try {
             const { usuario_correo, contraseña } = req.body;
             let conection = await pg.connect();
-            await conection.query('SELECT * FROM usuarios WHERE usuario= $1 OR correo= $1 where activo=true', [usuario_correo])
+            await conection.query('SELECT * FROM usuarios WHERE (usuario= $1 OR correo= $1) AND activo=true', [usuario_correo])
                 .then(async (data) => {
                     conection.release();
                     if (data.rows[0]) {
@@ -180,7 +118,7 @@ const controller = {
                         console.log(cry);
                         if (cry) {
                             let jsonData = data.rows[0];
-                            let token = jwt.sign(jsonData, "26-02-2021");
+                            let token = jwt.sign(jsonData, process.env.JWB_PASSWORD);
                             res.json({ token, status: true })
                         } else {
                             res.json({ status: false, err: "The password is invalid" });
@@ -190,7 +128,6 @@ const controller = {
                     }
                 })
                 .catch((err) => {
-                    conection.release();
                     res.json({ status: false, err });
                     console.log(err);
                 })
@@ -199,9 +136,27 @@ const controller = {
             console.log(err);
         }
     },
+    get_info_registro: async (req, res) => {
+        try {
+            const { usuario, correo } = req.body;
+            let conection = await pg.connect();
+            conection.query('SELECT usuario, correo, activo FROM usuarios WHERE usuario=$1 OR correo=$2', [usuario, correo])
+                .then((data) => {
+                    conection.release();
+                    res.json({ jsonData: data.rows, status: true });
+                })
+                .catch((err) => {
+                    res.json({ status: false, err: err });
+                    console.log(err);
+                });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
     token_verify: async (req, res) => {
         let { token } = req.params;
-        jwt.verify(token, "26-02-2021", async (err, data) => {
+        jwt.verify(token, process.env.JWB_PASSWORD, async (err, data) => {
             if (err) {
                 res.json({ validation: false });
             } else {
@@ -209,24 +164,7 @@ const controller = {
             }
         });
     },
-    generos: async (req, res) => {
-        try {
-            let conection = await pg.connect();
-            await conection.query('Select * from generos;')
-                .then((data) => {
-                    conection.release();
-                    res.json(data.rows);
-                })
-                .catch((err) => {
-                    conection.release();
-                    res.json({ status: false, err });
-                    console.log(err);
-                });
-        } catch (err) {
-            res.json({ status: false, err });
-            console.log(err);
-        }
-    },
+    /*Actualizar información*/
     update: async (req, res) => {
         try {
             let { id, nombre, apellido, genero, fecha_n } = req.body;
@@ -235,10 +173,9 @@ const controller = {
             await conection.query(query, [nombre, apellido, genero, fecha_n, id])
                 .then((data) => {
                     conection.release();
-                    let token = jwt.sign(data.rows[0], "26-02-2021");
+                    let token = jwt.sign(data.rows[0], process.env.JWB_PASSWORD);
                     res.json({ token, status: true });
                 }).catch((err) => {
-                    conection.release();
                     res.json({ status: false, err });
                     console.log(err);
                 })
@@ -247,7 +184,111 @@ const controller = {
             console.log(error);
         }
     },
-    delete: async (req, res) => {
+    update_password: async (req, res) => {
+        try {
+            const { contraseña, id } = req.body;
+            const random = Math.round(Math.random() * 6, 5);
+            await encrypt.hash(contraseña, random, async (err, cry) => {
+                let conection = await pg.connect();
+                await conection.query('UPDATE usuarios SET contraseña=$1 WHERE id=$2 RETURNING *', [cry, id])
+                    .then((data) => {
+                        conection.release();
+                        let jsonData = data.rows[0];
+                        let token = jwt.sign(jsonData, process.env.JWB_PASSWORD);
+                        res.json({ status: true, token });
+                    })
+                    .catch((err) => {
+                        res.json({ status: false, err: err });
+                        console.log(err);
+                    });
+            });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
+    upload_avatar: async (req, res) => {
+        try {
+            const { usuario, id } = req.body;
+            const newFileName = "avatars/" + uuidv4() + id + "-" + usuario + "-avatar" + path.extname(req.file.originalname);
+            const file = bucket.file(newFileName);
+            const fileStream = await file.createWriteStream({
+                resumable: false,
+                qzip: true,
+                public: true
+            })
+                .on('error', (err) => {
+                    res.json({ status: false, err: err })
+                    console.log(err);
+                })
+                .on('finish', async () => {
+                    const publicURL = `https://storage.googleapis.com/${process.env.GCLOUD_BUCKET}/${file.name}`;
+                    const dataAvatar = file.name;
+                    let conection = await pg.connect();
+                    await conection.query('UPDATE usuarios SET avatar=$1 WHERE id=$2 RETURNING *', [file.name, id])
+                        .then((data) => {
+                            conection.release();
+                            let token = jwt.sign(data.rows[0], process.env.JWB_PASSWORD);
+                            res.json({ status: true, token });
+                        })
+                        .catch((err) => {
+                            res.json({ status: false, err: err });
+                            console.log(err);
+                        });
+                });
+
+            fileStream.end(req.file.buffer);
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
+    delete_avatar: async (req, res) => {
+        try {
+            const { filename, id, caso } = req.body;
+            const file = bucket.file(filename);
+            file.delete();
+            if (caso) {
+                let conection = await pg.connect();
+                await conection.query('UPDATE usuarios SET avatar= DEFAULT WHERE id=$1 RETURNING *', [id])
+                    .then((data) => {
+                        conection.release();
+                        let token = jwt.sign(data.rows[0], process.env.JWB_PASSWORD);
+                        res.json({ status: true, token });
+                    })
+                    .catch((err) => {
+                        res.json({ status: false, err: err });
+                        console.log(err);
+                    });
+            }
+            res.json({ status: true });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
+    /*Borrado lógico*/
+    activate_account: async (req, res) => {
+        try {
+            const { correo, usuario } = req.body;
+            let conection = await pg.connect();
+            await conection.query("UPDATE usuarios SET usuario=$1, activo=true WHERE correo=$2 RETURNING *", [usuario, correo])
+                .then((data) => {
+                    conection.release();
+                    let jsonData = data.rows[0];
+                    let token = jwt.sign(jsonData, process.env.JWB_PASSWORD);
+                    res.json({ status: true, token });
+                })
+                .catch((err) => {
+                    res.json({ status: false, err });
+                    console.log(err);
+                })
+        } catch (err) {
+            res.json({ status: false, err });
+            console.log(err);
+        }
+    },
+    delete_account: async (req, res) => {
         try {
             const { id } = req.params;
             let conection = await pg.connect();
@@ -261,6 +302,87 @@ const controller = {
                 });
         } catch (err) {
             res.json({ status: false, err });
+            console.log(err);
+        }
+    },
+    /*Relación ||usuario-usuario|| seguidores*/
+    get_all_users: async (req, res) => {
+        try {
+            const { offset } = req.params;
+            let conection = await pg.connect();
+            conection.query(`select  usuarios.id, concat(usuarios.nombre, ' ', usuarios.apellido) as nombre, usuarios.avatar, usuarios.usuario,usuarios.cant_seguidores , case when sc_cursos.cantidad_cursos is null then 0 else sc_cursos.cantidad_cursos end as CanCursos, case when sc_clases.cantidad_clases is null then 0 else sc_clases.cantidad_clases end as CanClases from usuarios 
+            left join (select count(*) as cantidad_cursos, id_creador as id_creador_curso from cursos where privacidad = false group by id_creador) as sc_cursos on usuarios.id = sc_cursos.id_creador_curso 
+            left join (select count(*) as cantidad_clases, id_creador as id_creador_clase from clases group by id_creador) as sc_clases on usuarios.id = sc_clases.id_creador_clase 
+            where usuarios.activo  = true 
+            order by usuarios.cant_seguidores desc,CanCursos desc, CanClases desc
+            limit 100 offset $1;           
+            `, [offset])
+                .then((data) => {
+                    conection.release();
+                    res.json({ status: true, data: data.rows });
+                })
+                .catch((err) => {
+                    res.json({ status: false, err: err });
+                    console.log(err);
+                });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
+    follow: async (req, res) => {
+        try {
+            const { token, id_seguido } = req.body;
+            jwt.verify(token, process.env.JWB_PASSWORD, async (err, dataToken) => {
+                let conection = await pg.connect();
+                await conection.query('CALL pa_insert_usuarioseguidor($1,$2)', [dataToken.id, id_seguido])
+                    .then((data) => {
+                        res.json({ status: true });
+                    })
+                    .catch((err) => {
+                        res.json({ status: false, err: err });
+                        console.log(err);
+                    });
+            });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
+    stop_following: async (req, res) => {
+        try {
+            const { token, id_seguido } = req.body;
+            jwt.verify(token, process.env.JWB_PASSWORD, async (err, dataToken) => {
+                let conection = await pg.connect();
+                await conection.query('CALL pa_delete_usuarioseguidor($1,$2)', [dataToken.id, id_seguido])
+                    .then((data) => {
+                        res.json({ status: true });
+                    })
+                    .catch((err) => {
+                        res.json({ status: false, err: err });
+                        console.log(err);
+                    });
+            });
+        } catch (err) {
+            res.json({ status: false, err: err });
+            console.log(err);
+        }
+    },
+    user_info: async (req, res) => {
+        try {
+            const { id } = req.params;
+            let conection = await pg.connect();
+            conection.query("SELECT id, CONCAT(usuarios.nombre, ' ', usuarios.apellido) as nombre, edad, avatar, genero, usuario, cant_seguidores from usuarios WHERE id=$1", [id])
+                .then((data) => {
+                    conection.release();
+                    res.json({ jsonData: data.rows[0], status: true });
+                })
+                .catch((err) => {
+                    res.json({ status: false, err: err });
+                    console.log(err);
+                })
+        } catch (err) {
+            res.json({ status: false, err: err });
             console.log(err);
         }
     }

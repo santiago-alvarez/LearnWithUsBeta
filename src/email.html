@@ -18,55 +18,26 @@
         .Main {
             width: 100%;
             height: 100vh;
-            display: flex;
-            flex-flow: column;
-            align-items: center;
-            justify-content: center;
+            text-align: center;
         }
-
+        .Main2{
+            width: 100%;
+        }
         .cargando {
             background-image: url("https://1.bp.blogspot.com/-eXfP9XUmzHc/X02wni0s3dI/AAAAAAAAPPo/Oj9XbD4WIpgvdS_jmAkJc32Z1vOnUzTXwCLcBGAsYHQ/s16000/LogoP.png");
             background-repeat: no-repeat;
             background-position: center center;
-            background-size: 100%;
-            width: 15vw;
+            background-size: 15vw;
             height: 15vw;
             background-color: rgb(256, 256, 256);
         }
-
         h2 {
             margin: 0;
         }
-
-        .texto {
-            width: 40%;
-            text-align: center;
-        }
-
-        @media(max-width: 550px) {
-            .texto {
-                max-width: 90%;
-
-            }
-
-            .cargando {
-                width: 30vh;
-                height: 30vh;
-            }
-        }
-
-        @media(min-height: 730px) {
-            .texto {
-                font-size: 1em;
-            }
-
-            body {
-                font-size: 2em;
-            }
-
-            .cargando {
-                width: 30vh;
-                height: 30vh;
+        @media(max-width:600px){
+            .cargando{
+                height: 20vh;
+                background-size: 20vh;
             }
         }
     </style>
@@ -74,11 +45,14 @@
 
 <body>
     <div class="Main">
-        <p class="texto">Te estás registrando en nuestra pagina web, Learn with us, ingresa el código en la pagina para
+        <p>Te estás registrando con el usaurio $DontHere$2 en nuestra pagina web Learn with us, ingresa el código en la pagina para
             continuar con el registo.</p>
-        <div class="cargando"></div>
-        <h2>Tu código de verificación es <br>Learn- </h2>
-        <p class="texto">Por favor no responda este correo, ya que se encarga únicamente de la difusión, si no es usted ignore este mensaje.</p>
+        <div class="Main2">
+            <div class="cargando"></div>
+        </div>
+        <h2>Tu código de verificación es <br>Learn- $replaceHere$</h2>
+        <p>Por favor no responda este correo, ya que se encarga únicamente de la difusión, si no es usted
+            ignore este mensaje.</p>
     </div>
 </body>
 

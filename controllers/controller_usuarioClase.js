@@ -1,10 +1,12 @@
 const pg = require('./../db/db');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
 const controller = {
+    /*Entrar y salir de una clase*/
     insert: async (req, res) => {
         try {
             const { token, id_clase } = req.body;
-            jwt.verify(token, "26-02-2021", async (err, dataToken) => {
+            jwt.verify(token, process.env.JWB_PASSWORD, async (err, dataToken) => {
                 let conection = await pg.connect();
                 await conection.query(`CALL pa_insert_usuarioclase($1,$2);`, [dataToken.id, id_clase])
                     .then((data) => {
@@ -12,7 +14,6 @@ const controller = {
                         res.json({ status: true });
                     })
                     .catch((err) => {
-                        conection.release();
                         res.json({ status: false, err });
                         console.log(err);
                     });
@@ -22,6 +23,27 @@ const controller = {
             console.log(err);
         }
     },
+    delete: async (req, res) => {
+        try {
+            const { id_clase, token } = req.params;
+            jwt.verify(token, process.env.JWB_PASSWORD ,async (err, dataToken) => {
+                let conection = await pg.connect();
+                await conection.query('call pa_delete_usuarioclase($1,$2)', [id_clase, dataToken.id])
+                    .then((data) => {
+                        conection.release();
+                        res.json({ status: true });
+                    })
+                    .catch((err) => {
+                        res.json({ status: false, err });
+                        console.log(err);
+                    });
+            });
+        } catch (err) {
+            res.json({ status: false, err });
+            console.log(err);
+        }
+    },
+    /*Integrantes de una clase*/
     info_name: async (req, res) => {
         try {
             const { id_clase } = req.params;
@@ -33,31 +55,9 @@ const controller = {
                     res.json({ status: true, jsonData });
                 })
                 .catch((err) => {
-                    conection.release();
                     res.json({ status: false, err });
                     console.log(err);
                 });
-        } catch (err) {
-            res.json({ status: false, err });
-            console.log(err);
-        }
-    },
-    delete: async (req, res) => {
-        try {
-            const { id_clase, token } = req.params;
-            jwt.verify(token, "26-02-2021",async (err, dataToken) => {
-                let conection = await pg.connect();
-                await conection.query('call pa_delete_usuarioclase($1,$2)', [id_clase, dataToken.id])
-                    .then((data) => {
-                        conection.release();
-                        res.json({ status: true });
-                    })
-                    .catch((err) => {
-                        conection.release();
-                        res.json({ status: false, err });
-                        console.log(err);
-                    });
-            });
         } catch (err) {
             res.json({ status: false, err });
             console.log(err);
